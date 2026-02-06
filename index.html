@@ -347,20 +347,84 @@
 
             // Show preview
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 document.getElementById('coverPreview').src = e.target.result;
                 document.getElementById('coverPreview').style.display = 'block';
                 uploadedCoverUrl = e.target.result;
+                
+                // Show loading
+                document.getElementById('loadingSpinner').style.display = 'block';
+                
+                // Perform OCR on the image
+                await performOCRAndFetchBookDetails(e.target.result);
             };
             reader.readAsDataURL(file);
+        }
 
-            // Show loading
-            document.getElementById('loadingSpinner').style.display = 'block';
-
+        // Perform OCR on book cover and fetch details
+        async function performOCRAndFetchBookDetails(imageData) {
             try {
-                const fileName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
+                // Use Tesseract.js for client-side OCR
+                // For production, use: https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js
+                // Simplified approach: Extract text using Google Books API with image search
                 
-                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(fileName)}&maxResults=1`);
+                // Convert base64 to blob for processing
+                const base64Data = imageData.split(',')[1];
+                
+                // Use Google Cloud Vision API (requires API key)
+                // Alternative: Use open-source Tesseract.js
+                const ocrText = await extractTextFromImage(imageData);
+                
+                if (ocrText) {
+                    // Search Google Books with extracted text
+                    await searchBookByText(ocrText);
+                } else {
+                    document.getElementById('bookTitle').readOnly = false;
+                    document.getElementById('bookAuthor').readOnly = false;
+                    document.getElementById('bookSummary').readOnly = false;
+                    alert('Could not read text from image. Please enter details manually.');
+                }
+            } catch (error) {
+                console.error('OCR Error:', error);
+                document.getElementById('bookTitle').readOnly = false;
+                document.getElementById('bookAuthor').readOnly = false;
+                document.getElementById('bookSummary').readOnly = false;
+                alert('Could not scan image. Please enter details manually.');
+            }
+            
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+
+        // Extract text from image using Tesseract.js (client-side OCR)
+        async function extractTextFromImage(imageData) {
+            try {
+                // Load Tesseract.js dynamically
+                if (!window.Tesseract) {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+                    document.head.appendChild(script);
+                    await new Promise(resolve => script.onload = resolve);
+                }
+
+                const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
+                    logger: m => console.log(m)
+                });
+                
+                return text.trim();
+            } catch (error) {
+                console.error('Tesseract error:', error);
+                return null;
+            }
+        }
+
+        // Search book details using extracted text
+        async function searchBookByText(extractedText) {
+            try {
+                // Clean and extract likely book title (usually largest text on cover)
+                const lines = extractedText.split('\n').filter(line => line.trim().length > 2);
+                const searchQuery = lines.slice(0, 3).join(' '); // Use first 3 lines
+                
+                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=1`);
                 const data = await response.json();
 
                 if (data.items && data.items.length > 0) {
@@ -404,17 +468,15 @@
                     document.getElementById('bookTitle').readOnly = false;
                     document.getElementById('bookAuthor').readOnly = false;
                     document.getElementById('bookSummary').readOnly = false;
-                    alert('Could not auto-detect book details. Please enter manually.');
+                    alert('Could not find book details. Please enter manually.');
                 }
             } catch (error) {
-                console.error('Error fetching book details:', error);
+                console.error('Search error:', error);
                 document.getElementById('bookTitle').readOnly = false;
                 document.getElementById('bookAuthor').readOnly = false;
                 document.getElementById('bookSummary').readOnly = false;
-                alert('Could not auto-detect book details. Please enter manually.');
+                alert('Could not find book details. Please enter manually.');
             }
-
-            document.getElementById('loadingSpinner').style.display = 'none';
         }
 
         // Show add book form
