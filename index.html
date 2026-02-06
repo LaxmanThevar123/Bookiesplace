@@ -6,36 +6,43 @@
     <title>BookiesPlace - Online Book Catalogue</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; font-size: 18px; }
-        .header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
-        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 18px; min-height: 100vh; }
+        .header { background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); color: white; padding: 30px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 36px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .contact { font-size: 20px; margin-top: 10px; }
-        .admin-btn { position: fixed; top: 20px; right: 20px; background: #e74c3c; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; z-index: 100; }
-        .search-bar { padding: 20px; background: white; margin: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .search-bar input { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 5px; }
-        .filters { padding: 20px; margin: 0 20px; background: white; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
-        .filter-btn { padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        .filter-btn.active { background: #2980b9; }
-        .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; }
-        .book-card { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .book-cover { width: 100%; height: 200px; object-fit: cover; border-radius: 5px; background: #ddd; }
+        .admin-btn { position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-size: 16px; z-index: 100; box-shadow: 0 5px 20px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .admin-btn:hover { transform: scale(1.05); }
+        .search-bar { padding: 20px; background: rgba(255,255,255,0.95); margin: 20px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+        .search-bar input { width: 100%; padding: 15px; font-size: 18px; border: none; border-radius: 10px; background: white; box-shadow: inset 0 2px 8px rgba(0,0,0,0.1); }
+        .filters { padding: 20px; margin: 0 20px 20px 20px; background: rgba(255,255,255,0.95); border-radius: 15px; display: flex; gap: 10px; flex-wrap: wrap; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .filter-btn { padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 16px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .filter-btn.active { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+        .filter-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+        .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; padding: 20px; }
+        .book-card { background: rgba(255,255,255,0.95); border-radius: 20px; padding: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; backdrop-filter: blur(10px); }
+        .book-card:hover { transform: translateY(-10px) rotateX(5deg); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .book-cover { width: 100%; height: 250px; object-fit: cover; border-radius: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .book-title { font-size: 20px; font-weight: bold; margin: 10px 0; color: #2c3e50; }
         .book-author { color: #7f8c8d; font-size: 16px; margin-bottom: 8px; }
-        .book-category { display: inline-block; background: #3498db; color: white; padding: 5px 10px; border-radius: 3px; font-size: 14px; margin-bottom: 8px; }
+        .book-category { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; margin-bottom: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .book-summary { color: #555; font-size: 15px; line-height: 1.5; margin-top: 8px; }
         .book-price { font-size: 22px; font-weight: bold; color: #27ae60; margin-top: 10px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; overflow-y: auto; }
-        .modal-content { background: white; margin: 50px auto; padding: 30px; max-width: 600px; border-radius: 8px; }
+        .modal-content { background: white; margin: 50px auto; padding: 30px; max-width: 600px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
         .modal-content h2 { margin-bottom: 20px; font-size: 26px; }
-        .modal-content input, .modal-content textarea, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; border: 2px solid #ddd; border-radius: 5px; }
-        .modal-content button { padding: 12px 25px; margin: 10px 5px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
-        .btn-primary { background: #27ae60; color: white; }
+        .modal-content input, .modal-content textarea, .modal-content select { width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; border: 2px solid #ddd; border-radius: 10px; transition: border 0.3s; }
+        .modal-content input:focus, .modal-content textarea:focus, .modal-content select:focus { outline: none; border: 2px solid #667eea; }
+        .modal-content button { padding: 12px 25px; margin: 10px 5px; font-size: 16px; border: none; border-radius: 25px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-content button:hover { transform: translateY(-2px); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .btn-secondary { background: #95a5a6; color: white; }
-        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
         .admin-panel { padding: 20px; }
         .admin-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-        .book-list-item { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .no-books { text-align: center; padding: 50px; font-size: 20px; color: #7f8c8d; }
+        .book-list-item { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .book-list-item:hover { transform: translateX(5px); }
+        .no-books { text-align: center; padding: 50px; font-size: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .admin-search { padding: 15px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; width: 100%; }
     </style>
 </head>
 <body>
@@ -85,6 +92,7 @@
                 <input type="file" id="importFile" style="display:none" accept=".json" onchange="importBackup(event)">
                 <button class="btn-secondary" onclick="closeModal('adminPanelModal')">Close</button>
             </div>
+            <input type="text" id="adminSearchInput" class="admin-search" placeholder="🔍 Search books in admin panel..." oninput="displayAdminBooks()">
             <div id="adminBooksList"></div>
         </div>
     </div>
@@ -144,7 +152,58 @@
         // Load default 2500+ books
         function loadDefaultBooks() {
             const categories = ['Fiction', 'History', 'Mystery', 'Fantasy', 'Romance', 'Science', 'Biography'];
-            const authors = ['James Patterson', 'Stephen King', 'J.K. Rowling', 'Dan Brown', 'Agatha Christie', 'George R.R. Martin', 'Jane Austen', 'Ernest Hemingway', 'Mark Twain', 'Charles Dickens', 'Leo Tolstoy', 'F. Scott Fitzgerald', 'Harper Lee', 'Gabriel Garcia Marquez', 'Margaret Atwood', 'Toni Morrison', 'John Steinbeck', 'Virginia Woolf', 'Oscar Wilde', 'Emily Bronte'];
+            
+            const bookData = {
+                Fiction: [
+                    {title: 'To Kill a Mockingbird', author: 'Harper Lee', isbn: '9780061120084'},
+                    {title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', isbn: '9780743273565'},
+                    {title: 'Pride and Prejudice', author: 'Jane Austen', isbn: '9780141439518'},
+                    {title: '1984', author: 'George Orwell', isbn: '9780451524935'},
+                    {title: 'The Catcher in the Rye', author: 'J.D. Salinger', isbn: '9780316769174'}
+                ],
+                History: [
+                    {title: 'Sapiens', author: 'Yuval Noah Harari', isbn: '9780062316097'},
+                    {title: 'The Guns of August', author: 'Barbara W. Tuchman', isbn: '9780345476098'},
+                    {title: 'A People\'s History', author: 'Howard Zinn', isbn: '9780062397348'},
+                    {title: 'The Rise and Fall of the Third Reich', author: 'William L. Shirer', isbn: '9781451651683'},
+                    {title: 'Team of Rivals', author: 'Doris Kearns Goodwin', isbn: '9780743270755'}
+                ],
+                Mystery: [
+                    {title: 'The Girl with the Dragon Tattoo', author: 'Stieg Larsson', isbn: '9780307454546'},
+                    {title: 'Gone Girl', author: 'Gillian Flynn', isbn: '9780307588371'},
+                    {title: 'The Da Vinci Code', author: 'Dan Brown', isbn: '9780307474278'},
+                    {title: 'Murder on the Orient Express', author: 'Agatha Christie', isbn: '9780062693662'},
+                    {title: 'The Hound of the Baskervilles', author: 'Arthur Conan Doyle', isbn: '9780451528018'}
+                ],
+                Fantasy: [
+                    {title: 'Harry Potter and the Sorcerer\'s Stone', author: 'J.K. Rowling', isbn: '9780590353427'},
+                    {title: 'The Hobbit', author: 'J.R.R. Tolkien', isbn: '9780547928227'},
+                    {title: 'A Game of Thrones', author: 'George R.R. Martin', isbn: '9780553103540'},
+                    {title: 'The Name of the Wind', author: 'Patrick Rothfuss', isbn: '9780756404079'},
+                    {title: 'The Way of Kings', author: 'Brandon Sanderson', isbn: '9780765326355'}
+                ],
+                Romance: [
+                    {title: 'The Notebook', author: 'Nicholas Sparks', isbn: '9780446605236'},
+                    {title: 'Me Before You', author: 'Jojo Moyes', isbn: '9780143124542'},
+                    {title: 'Outlander', author: 'Diana Gabaldon', isbn: '9780440212560'},
+                    {title: 'The Time Traveler\'s Wife', author: 'Audrey Niffenegger', isbn: '9780156029438'},
+                    {title: 'The Fault in Our Stars', author: 'John Green', isbn: '9780142424179'}
+                ],
+                Science: [
+                    {title: 'A Brief History of Time', author: 'Stephen Hawking', isbn: '9780553380163'},
+                    {title: 'The Selfish Gene', author: 'Richard Dawkins', isbn: '9780198788607'},
+                    {title: 'Cosmos', author: 'Carl Sagan', isbn: '9780345539434'},
+                    {title: 'The Origin of Species', author: 'Charles Darwin', isbn: '9780451529060'},
+                    {title: 'Astrophysics for People in a Hurry', author: 'Neil deGrasse Tyson', isbn: '9780393609394'}
+                ],
+                Biography: [
+                    {title: 'Steve Jobs', author: 'Walter Isaacson', isbn: '9781451648539'},
+                    {title: 'The Diary of a Young Girl', author: 'Anne Frank', isbn: '9780553296983'},
+                    {title: 'Long Walk to Freedom', author: 'Nelson Mandela', isbn: '9780316548182'},
+                    {title: 'Becoming', author: 'Michelle Obama', isbn: '9781524763138'},
+                    {title: 'Einstein: His Life and Universe', author: 'Walter Isaacson', isbn: '9780743264747'}
+                ]
+            };
             
             const summaries = {
                 Fiction: ['A compelling story of love and loss.', 'An unforgettable journey through time.', 'A tale of redemption and hope.', 'A gripping narrative of human resilience.'],
@@ -156,21 +215,24 @@
                 Biography: ['The inspiring life story of a legend.', 'A remarkable journey of achievement.', 'From humble beginnings to greatness.', 'The life and times of an icon.']
             };
 
-            for (let i = 1; i <= 2500; i++) {
-                const category = categories[Math.floor(Math.random() * categories.length)];
-                const author = authors[Math.floor(Math.random() * authors.length)];
-                const summaryList = summaries[category];
-                const summary = summaryList[Math.floor(Math.random() * summaryList.length)];
-                const price = (Math.random() * 30 + 5).toFixed(2);
+            let bookId = 1;
+            for (let i = 0; i < 500; i++) {
+                categories.forEach(category => {
+                    const categoryBooks = bookData[category];
+                    const book = categoryBooks[i % categoryBooks.length];
+                    const summaryList = summaries[category];
+                    const summary = summaryList[Math.floor(Math.random() * summaryList.length)];
+                    const price = (Math.random() * 30 + 5).toFixed(2);
 
-                books.push({
-                    id: Date.now() + i,
-                    title: `${category} Book ${i}`,
-                    author: author,
-                    category: category,
-                    summary: summary,
-                    price: price,
-                    cover: `https://via.placeholder.com/200x300/3498db/ffffff?text=${category}+${i}`
+                    books.push({
+                        id: Date.now() + bookId++,
+                        title: book.title,
+                        author: book.author,
+                        category: category,
+                        summary: summary,
+                        price: price,
+                        cover: `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`
+                    });
                 });
             }
             saveBooks();
@@ -195,7 +257,7 @@
 
             grid.innerHTML = filtered.map(book => `
                 <div class="book-card">
-                    <img class="book-cover" src="${book.cover}" alt="${book.title}" onerror="this.src='https://via.placeholder.com/200x300/95a5a6/ffffff?text=No+Cover'">
+                    <img class="book-cover" src="${book.cover}" alt="${book.title}" onerror="this.src='https://covers.openlibrary.org/b/id/8739161-L.jpg'">
                     <div class="book-title">${book.title}</div>
                     <div class="book-author">by ${book.author}</div>
                     <span class="book-category">${book.category}</span>
@@ -243,7 +305,14 @@
         // Display books in admin panel
         function displayAdminBooks() {
             const list = document.getElementById('adminBooksList');
-            list.innerHTML = books.map(book => `
+            const searchTerm = document.getElementById('adminSearchInput').value.toLowerCase();
+            
+            const filtered = books.filter(book => 
+                book.title.toLowerCase().includes(searchTerm) || 
+                book.author.toLowerCase().includes(searchTerm)
+            );
+            
+            list.innerHTML = filtered.map(book => `
                 <div class="book-list-item">
                     <div>
                         <strong>${book.title}</strong> by ${book.author} - $${book.price}
