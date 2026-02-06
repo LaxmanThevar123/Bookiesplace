@@ -43,6 +43,11 @@
         .book-list-item:hover { transform: translateX(5px); }
         .no-books { text-align: center; padding: 50px; font-size: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .admin-search { padding: 15px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; width: 100%; }
+        .cover-upload-area { border: 3px dashed #667eea; border-radius: 15px; padding: 30px; text-align: center; cursor: pointer; margin: 15px 0; background: #f8f9fa; transition: all 0.3s; }
+        .cover-upload-area:hover { background: #e9ecef; border-color: #f5576c; }
+        .cover-preview { max-width: 200px; max-height: 300px; margin: 15px auto; border-radius: 10px; display: block; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .loading-spinner { display: none; margin: 10px 0; color: #667eea; font-weight: bold; }
+        .auto-filled { background: #d4edda !important; border-color: #28a745 !important; }
     </style>
 </head>
 <body>
@@ -101,8 +106,17 @@
     <div id="bookFormModal" class="modal">
         <div class="modal-content">
             <h2 id="formTitle">Add New Book</h2>
-            <input type="text" id="bookTitle" placeholder="Book Title">
-            <input type="text" id="bookAuthor" placeholder="Author Name">
+            
+            <div class="cover-upload-area" onclick="document.getElementById('coverImageInput').click()">
+                <p>📷 Click to Upload Book Cover Image</p>
+                <p style="font-size: 14px; color: #666; margin-top: 5px;">Book details will be auto-filled</p>
+            </div>
+            <input type="file" id="coverImageInput" accept="image/*" style="display:none" onchange="handleCoverUpload(event)">
+            <img id="coverPreview" class="cover-preview" style="display:none">
+            <div id="loadingSpinner" class="loading-spinner">🔍 Analyzing book cover...</div>
+            
+            <input type="text" id="bookTitle" placeholder="Book Title" readonly>
+            <input type="text" id="bookAuthor" placeholder="Author Name" readonly>
             <select id="bookCategory">
                 <option value="Fiction">Fiction</option>
                 <option value="History">History</option>
@@ -112,9 +126,9 @@
                 <option value="Science">Science</option>
                 <option value="Biography">Biography</option>
             </select>
-            <textarea id="bookSummary" placeholder="Book Summary" rows="4"></textarea>
+            <textarea id="bookSummary" placeholder="Book Summary" rows="4" readonly></textarea>
             <input type="number" id="bookPrice" placeholder="Price (e.g., 15.99)" step="0.01">
-            <input type="text" id="bookISBN" placeholder="ISBN (optional - for cover image)">
+            <input type="text" id="bookISBN" placeholder="ISBN (optional - for cover image)" style="display:none">
             <button class="btn-primary" onclick="saveBook()">Save Book</button>
             <button class="btn-secondary" onclick="closeModal('bookFormModal')">Cancel</button>
         </div>
@@ -125,6 +139,7 @@
         let books = [];
         let currentFilter = 'All';
         let editingBookId = null;
+        let uploadedCoverUrl = null;
 
         // Initialize
         function init() {
@@ -325,16 +340,97 @@
             `).join('');
         }
 
+        // Handle cover image upload and auto-fill book details
+        async function handleCoverUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('coverPreview').src = e.target.result;
+                document.getElementById('coverPreview').style.display = 'block';
+                uploadedCoverUrl = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            document.getElementById('loadingSpinner').style.display = 'block';
+
+            try {
+                const fileName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
+                
+                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(fileName)}&maxResults=1`);
+                const data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    const bookInfo = data.items[0].volumeInfo;
+                    
+                    document.getElementById('bookTitle').value = bookInfo.title || '';
+                    document.getElementById('bookTitle').readOnly = false;
+                    document.getElementById('bookTitle').classList.add('auto-filled');
+                    
+                    document.getElementById('bookAuthor').value = bookInfo.authors ? bookInfo.authors.join(', ') : '';
+                    document.getElementById('bookAuthor').readOnly = false;
+                    document.getElementById('bookAuthor').classList.add('auto-filled');
+                    
+                    document.getElementById('bookSummary').value = bookInfo.description || 'A fascinating book worth reading.';
+                    document.getElementById('bookSummary').readOnly = false;
+                    document.getElementById('bookSummary').classList.add('auto-filled');
+
+                    const categories = bookInfo.categories || [];
+                    if (categories.length > 0) {
+                        const cat = categories[0].toLowerCase();
+                        if (cat.includes('fiction')) document.getElementById('bookCategory').value = 'Fiction';
+                        else if (cat.includes('history')) document.getElementById('bookCategory').value = 'History';
+                        else if (cat.includes('mystery') || cat.includes('thriller')) document.getElementById('bookCategory').value = 'Mystery';
+                        else if (cat.includes('fantasy')) document.getElementById('bookCategory').value = 'Fantasy';
+                        else if (cat.includes('romance')) document.getElementById('bookCategory').value = 'Romance';
+                        else if (cat.includes('science')) document.getElementById('bookCategory').value = 'Science';
+                        else if (cat.includes('biography')) document.getElementById('bookCategory').value = 'Biography';
+                    }
+
+                    if (bookInfo.industryIdentifiers) {
+                        const isbn = bookInfo.industryIdentifiers.find(id => id.type === 'ISBN_13' || id.type === 'ISBN_10');
+                        if (isbn) {
+                            document.getElementById('bookISBN').value = isbn.identifier;
+                            if (bookInfo.imageLinks && bookInfo.imageLinks.thumbnail) {
+                                uploadedCoverUrl = bookInfo.imageLinks.thumbnail.replace('http:', 'https:');
+                                document.getElementById('coverPreview').src = uploadedCoverUrl;
+                            }
+                        }
+                    }
+                } else {
+                    document.getElementById('bookTitle').readOnly = false;
+                    document.getElementById('bookAuthor').readOnly = false;
+                    document.getElementById('bookSummary').readOnly = false;
+                    alert('Could not auto-detect book details. Please enter manually.');
+                }
+            } catch (error) {
+                console.error('Error fetching book details:', error);
+                document.getElementById('bookTitle').readOnly = false;
+                document.getElementById('bookAuthor').readOnly = false;
+                document.getElementById('bookSummary').readOnly = false;
+                alert('Could not auto-detect book details. Please enter manually.');
+            }
+
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+
         // Show add book form
         function showAddBookForm() {
             editingBookId = null;
+            uploadedCoverUrl = null;
             document.getElementById('formTitle').textContent = 'Add New Book';
             document.getElementById('bookTitle').value = '';
+            document.getElementById('bookTitle').readOnly = true;
             document.getElementById('bookAuthor').value = '';
+            document.getElementById('bookAuthor').readOnly = true;
             document.getElementById('bookCategory').value = 'Fiction';
             document.getElementById('bookSummary').value = '';
+            document.getElementById('bookSummary').readOnly = true;
             document.getElementById('bookPrice').value = '';
             document.getElementById('bookISBN').value = '';
+            document.getElementById('coverPreview').style.display = 'none';
+            document.getElementById('loadingSpinner').style.display = 'none';
             document.getElementById('bookFormModal').style.display = 'block';
         }
 
@@ -344,12 +440,18 @@
             if (!book) return;
 
             editingBookId = id;
+            uploadedCoverUrl = book.cover;
             document.getElementById('formTitle').textContent = 'Edit Book';
             document.getElementById('bookTitle').value = book.title;
+            document.getElementById('bookTitle').readOnly = false;
             document.getElementById('bookAuthor').value = book.author;
+            document.getElementById('bookAuthor').readOnly = false;
             document.getElementById('bookCategory').value = book.category;
             document.getElementById('bookSummary').value = book.summary;
+            document.getElementById('bookSummary').readOnly = false;
             document.getElementById('bookPrice').value = book.price;
+            document.getElementById('coverPreview').src = book.cover;
+            document.getElementById('coverPreview').style.display = 'block';
             document.getElementById('bookFormModal').style.display = 'block';
         }
 
@@ -367,10 +469,9 @@
                 return;
             }
 
-            let cover = `https://covers.openlibrary.org/b/id/8739161-L.jpg`;
+            let cover = uploadedCoverUrl || `https://covers.openlibrary.org/b/id/8739161-L.jpg`;
             
-            // Fetch cover from Open Library if ISBN provided
-            if (isbn) {
+            if (isbn && !uploadedCoverUrl) {
                 cover = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
             }
 
