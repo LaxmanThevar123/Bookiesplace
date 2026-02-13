@@ -106,8 +106,7 @@
             <h2 id="formTitle">Add New Book</h2>
             
             <div style="margin-bottom: 20px;">
-                <input type="text" id="bookSearchInput" placeholder="🔍 Search book by name..." style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #667eea; border-radius: 10px;">
-                <button class="btn-primary" onclick="searchOpenLibrary()" style="width: 100%; margin-top: 10px;">Search Open Library</button>
+                <input type="text" id="bookSearchInput" placeholder="🔍 Type book name to search..." style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #667eea; border-radius: 10px;" oninput="searchOpenLibrary()">
             </div>
             <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
             <div id="loadingSpinner" class="loading-spinner">🔍 Searching Open Library...</div>
@@ -339,54 +338,56 @@
             `).join('');
         }
 
-        // Search Open Library by book name
+        // Search Open Library by book name (with debounce)
+        let searchTimeout;
         async function searchOpenLibrary() {
+            clearTimeout(searchTimeout);
+            
             const searchTerm = document.getElementById('bookSearchInput').value.trim();
-            if (!searchTerm) {
-                alert('Please enter a book name to search');
+            if (!searchTerm || searchTerm.length < 3) {
+                document.getElementById('searchResults').innerHTML = '';
                 return;
             }
 
-            document.getElementById('loadingSpinner').style.display = 'block';
-            document.getElementById('searchResults').innerHTML = '';
+            searchTimeout = setTimeout(async () => {
+                document.getElementById('loadingSpinner').style.display = 'block';
+                document.getElementById('searchResults').innerHTML = '';
 
-            try {
-                const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(searchTerm)}&limit=5`);
-                const data = await response.json();
+                try {
+                    const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(searchTerm)}&limit=5`);
+                    const data = await response.json();
 
-                document.getElementById('loadingSpinner').style.display = 'none';
+                    document.getElementById('loadingSpinner').style.display = 'none';
 
-                if (data.docs && data.docs.length > 0) {
-                    const resultsHtml = data.docs.map((book, index) => {
-                        const title = book.title || 'Unknown Title';
-                        const author = book.author_name ? book.author_name.join(', ') : 'Unknown Author';
-                        const coverId = book.cover_i;
-                        const subjects = book.subject ? book.subject.slice(0, 3).join(', ') : '';
+                    if (data.docs && data.docs.length > 0) {
+                        const resultsHtml = data.docs.map((book, index) => {
+                            const title = book.title || 'Unknown Title';
+                            const author = book.author_name ? book.author_name.join(', ') : 'Unknown Author';
+                            const subjects = book.subject ? book.subject.slice(0, 3).join(', ') : '';
+                            
+                            return `
+                                <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 10px; cursor: pointer; border: 2px solid #ddd;" 
+                                     onclick="selectBook(${index})" 
+                                     onmouseover="this.style.borderColor='#667eea'" 
+                                     onmouseout="this.style.borderColor='#ddd'">
+                                    <strong>${title}</strong><br>
+                                    <small>by ${author}</small><br>
+                                    ${subjects ? `<small style="color: #666;">${subjects}</small>` : ''}
+                                </div>
+                            `;
+                        }).join('');
                         
-                        return `
-                            <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 10px; cursor: pointer; border: 2px solid #ddd;" 
-                                 onclick="selectBook(${index})" 
-                                 onmouseover="this.style.borderColor='#667eea'" 
-                                 onmouseout="this.style.borderColor='#ddd'">
-                                <strong>${title}</strong><br>
-                                <small>by ${author}</small><br>
-                                ${subjects ? `<small style="color: #666;">${subjects}</small>` : ''}
-                            </div>
-                        `;
-                    }).join('');
-                    
-                    document.getElementById('searchResults').innerHTML = resultsHtml;
-                    
-                    // Store search results for selection
-                    window.searchResultsData = data.docs;
-                } else {
-                    document.getElementById('searchResults').innerHTML = '<p style="color: #999; text-align: center;">No books found. Try a different search term.</p>';
+                        document.getElementById('searchResults').innerHTML = resultsHtml;
+                        window.searchResultsData = data.docs;
+                    } else {
+                        document.getElementById('searchResults').innerHTML = '<p style="color: #999; text-align: center;">No books found. Try a different search term.</p>';
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    document.getElementById('searchResults').innerHTML = '<p style="color: #f5576c; text-align: center;">Error searching. Please try again.</p>';
                 }
-            } catch (error) {
-                console.error('Search error:', error);
-                document.getElementById('loadingSpinner').style.display = 'none';
-                alert('Error searching Open Library. Please try again.');
-            }
+            }, 500);
         }
 
         // Select a book from search results
