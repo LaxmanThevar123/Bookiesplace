@@ -107,13 +107,14 @@
         <div class="modal-content">
             <h2 id="formTitle">Add New Book</h2>
             
-            <div class="cover-upload-area" onclick="document.getElementById('coverImageInput').click()">
-                <p>📷 Click to Upload Book Cover Image</p>
-                <p style="font-size: 14px; color: #666; margin-top: 5px;">Book details will be auto-filled</p>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="bookSearchInput" placeholder="🔍 Search book by name..." style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #667eea; border-radius: 10px;">
+                <button class="btn-primary" onclick="searchOpenLibrary()" style="width: 100%; margin-top: 10px;">Search Open Library</button>
             </div>
-            <input type="file" id="coverImageInput" accept="image/*" style="display:none" onchange="handleCoverUpload(event)">
+            <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
+            <div id="loadingSpinner" class="loading-spinner">🔍 Searching Open Library...</div>
+            
             <img id="coverPreview" class="cover-preview" style="display:none">
-            <div id="loadingSpinner" class="loading-spinner">🔍 Analyzing book cover...</div>
             
             <input type="text" id="bookTitle" placeholder="Book Title" readonly>
             <input type="text" id="bookAuthor" placeholder="Author Name" readonly>
@@ -340,143 +341,135 @@
             `).join('');
         }
 
-        // Handle cover image upload and auto-fill book details
-        async function handleCoverUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            // Show preview
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                document.getElementById('coverPreview').src = e.target.result;
-                document.getElementById('coverPreview').style.display = 'block';
-                uploadedCoverUrl = e.target.result;
-                
-                // Show loading
-                document.getElementById('loadingSpinner').style.display = 'block';
-                
-                // Perform OCR on the image
-                await performOCRAndFetchBookDetails(e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Perform OCR on book cover and fetch details
-        async function performOCRAndFetchBookDetails(imageData) {
-            try {
-                // Use Tesseract.js for client-side OCR
-                // For production, use: https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js
-                // Simplified approach: Extract text using Google Books API with image search
-                
-                // Convert base64 to blob for processing
-                const base64Data = imageData.split(',')[1];
-                
-                // Use Google Cloud Vision API (requires API key)
-                // Alternative: Use open-source Tesseract.js
-                const ocrText = await extractTextFromImage(imageData);
-                
-                if (ocrText) {
-                    // Search Google Books with extracted text
-                    await searchBookByText(ocrText);
-                } else {
-                    document.getElementById('bookTitle').readOnly = false;
-                    document.getElementById('bookAuthor').readOnly = false;
-                    document.getElementById('bookSummary').readOnly = false;
-                    alert('Could not read text from image. Please enter details manually.');
-                }
-            } catch (error) {
-                console.error('OCR Error:', error);
-                document.getElementById('bookTitle').readOnly = false;
-                document.getElementById('bookAuthor').readOnly = false;
-                document.getElementById('bookSummary').readOnly = false;
-                alert('Could not scan image. Please enter details manually.');
+        // Search Open Library by book name
+        async function searchOpenLibrary() {
+            const searchTerm = document.getElementById('bookSearchInput').value.trim();
+            if (!searchTerm) {
+                alert('Please enter a book name to search');
+                return;
             }
-            
-            document.getElementById('loadingSpinner').style.display = 'none';
-        }
 
-        // Extract text from image using Tesseract.js (client-side OCR)
-        async function extractTextFromImage(imageData) {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('searchResults').innerHTML = '';
+
             try {
-                // Load Tesseract.js dynamically
-                if (!window.Tesseract) {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
-                    document.head.appendChild(script);
-                    await new Promise(resolve => script.onload = resolve);
-                }
-
-                const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
-                    logger: m => console.log(m)
-                });
-                
-                return text.trim();
-            } catch (error) {
-                console.error('Tesseract error:', error);
-                return null;
-            }
-        }
-
-        // Search book details using extracted text
-        async function searchBookByText(extractedText) {
-            try {
-                // Clean and extract likely book title (usually largest text on cover)
-                const lines = extractedText.split('\n').filter(line => line.trim().length > 2);
-                const searchQuery = lines.slice(0, 3).join(' '); // Use first 3 lines
-                
-                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=1`);
+                const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(searchTerm)}&limit=5`);
                 const data = await response.json();
 
-                if (data.items && data.items.length > 0) {
-                    const bookInfo = data.items[0].volumeInfo;
-                    
-                    document.getElementById('bookTitle').value = bookInfo.title || '';
-                    document.getElementById('bookTitle').readOnly = false;
-                    document.getElementById('bookTitle').classList.add('auto-filled');
-                    
-                    document.getElementById('bookAuthor').value = bookInfo.authors ? bookInfo.authors.join(', ') : '';
-                    document.getElementById('bookAuthor').readOnly = false;
-                    document.getElementById('bookAuthor').classList.add('auto-filled');
-                    
-                    document.getElementById('bookSummary').value = bookInfo.description || 'A fascinating book worth reading.';
-                    document.getElementById('bookSummary').readOnly = false;
-                    document.getElementById('bookSummary').classList.add('auto-filled');
+                document.getElementById('loadingSpinner').style.display = 'none';
 
-                    const categories = bookInfo.categories || [];
-                    if (categories.length > 0) {
-                        const cat = categories[0].toLowerCase();
-                        if (cat.includes('fiction')) document.getElementById('bookCategory').value = 'Fiction';
-                        else if (cat.includes('history')) document.getElementById('bookCategory').value = 'History';
-                        else if (cat.includes('mystery') || cat.includes('thriller')) document.getElementById('bookCategory').value = 'Mystery';
-                        else if (cat.includes('fantasy')) document.getElementById('bookCategory').value = 'Fantasy';
-                        else if (cat.includes('romance')) document.getElementById('bookCategory').value = 'Romance';
-                        else if (cat.includes('science')) document.getElementById('bookCategory').value = 'Science';
-                        else if (cat.includes('biography')) document.getElementById('bookCategory').value = 'Biography';
-                    }
-
-                    if (bookInfo.industryIdentifiers) {
-                        const isbn = bookInfo.industryIdentifiers.find(id => id.type === 'ISBN_13' || id.type === 'ISBN_10');
-                        if (isbn) {
-                            document.getElementById('bookISBN').value = isbn.identifier;
-                            if (bookInfo.imageLinks && bookInfo.imageLinks.thumbnail) {
-                                uploadedCoverUrl = bookInfo.imageLinks.thumbnail.replace('http:', 'https:');
-                                document.getElementById('coverPreview').src = uploadedCoverUrl;
-                            }
-                        }
-                    }
+                if (data.docs && data.docs.length > 0) {
+                    const resultsHtml = data.docs.map((book, index) => {
+                        const title = book.title || 'Unknown Title';
+                        const author = book.author_name ? book.author_name.join(', ') : 'Unknown Author';
+                        const coverId = book.cover_i;
+                        const subjects = book.subject ? book.subject.slice(0, 3).join(', ') : '';
+                        
+                        return `
+                            <div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 10px; cursor: pointer; border: 2px solid #ddd;" 
+                                 onclick="selectBook(${index})" 
+                                 onmouseover="this.style.borderColor='#667eea'" 
+                                 onmouseout="this.style.borderColor='#ddd'">
+                                <strong>${title}</strong><br>
+                                <small>by ${author}</small><br>
+                                ${subjects ? `<small style="color: #666;">${subjects}</small>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('searchResults').innerHTML = resultsHtml;
+                    
+                    // Store search results for selection
+                    window.searchResultsData = data.docs;
                 } else {
-                    document.getElementById('bookTitle').readOnly = false;
-                    document.getElementById('bookAuthor').readOnly = false;
-                    document.getElementById('bookSummary').readOnly = false;
-                    alert('Could not find book details. Please enter manually.');
+                    document.getElementById('searchResults').innerHTML = '<p style="color: #999; text-align: center;">No books found. Try a different search term.</p>';
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                document.getElementById('bookTitle').readOnly = false;
-                document.getElementById('bookAuthor').readOnly = false;
-                document.getElementById('bookSummary').readOnly = false;
-                alert('Could not find book details. Please enter manually.');
+                document.getElementById('loadingSpinner').style.display = 'none';
+                alert('Error searching Open Library. Please try again.');
             }
+        }
+
+        // Select a book from search results
+        async function selectBook(index) {
+            const book = window.searchResultsData[index];
+            if (!book) return;
+
+            document.getElementById('loadingSpinner').style.display = 'block';
+
+            try {
+                // Get work details for description
+                let description = 'A fascinating book worth reading.';
+                if (book.key) {
+                    try {
+                        const workResponse = await fetch(`https://openlibrary.org${book.key}.json`);
+                        const workData = await workResponse.json();
+                        if (workData.description) {
+                            description = typeof workData.description === 'string' 
+                                ? workData.description 
+                                : workData.description.value || description;
+                        }
+                    } catch (e) {
+                        console.log('Could not fetch description');
+                    }
+                }
+
+                // Fill form fields
+                document.getElementById('bookTitle').value = book.title || '';
+                document.getElementById('bookTitle').readOnly = false;
+                document.getElementById('bookTitle').classList.add('auto-filled');
+                
+                document.getElementById('bookAuthor').value = book.author_name ? book.author_name.join(', ') : '';
+                document.getElementById('bookAuthor').readOnly = false;
+                
+                document.getElementById('bookSummary').value = description;
+                document.getElementById('bookSummary').readOnly = false;
+
+                // Auto-detect category from subjects
+                if (book.subject && book.subject.length > 0) {
+                    const subjects = book.subject.join(' ').toLowerCase();
+                    if (subjects.includes('fiction') || subjects.includes('novel')) {
+                        document.getElementById('bookCategory').value = 'Fiction';
+                    } else if (subjects.includes('history')) {
+                        document.getElementById('bookCategory').value = 'History';
+                    } else if (subjects.includes('mystery') || subjects.includes('thriller') || subjects.includes('detective')) {
+                        document.getElementById('bookCategory').value = 'Mystery';
+                    } else if (subjects.includes('fantasy') || subjects.includes('magic')) {
+                        document.getElementById('bookCategory').value = 'Fantasy';
+                    } else if (subjects.includes('romance') || subjects.includes('love')) {
+                        document.getElementById('bookCategory').value = 'Romance';
+                    } else if (subjects.includes('science')) {
+                        document.getElementById('bookCategory').value = 'Science';
+                    } else if (subjects.includes('biography') || subjects.includes('autobiography')) {
+                        document.getElementById('bookCategory').value = 'Biography';
+                    }
+                }
+
+                // Set cover image
+                if (book.cover_i) {
+                    uploadedCoverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+                    document.getElementById('coverPreview').src = uploadedCoverUrl;
+                    document.getElementById('coverPreview').style.display = 'block';
+                } else if (book.isbn && book.isbn[0]) {
+                    uploadedCoverUrl = `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`;
+                    document.getElementById('coverPreview').src = uploadedCoverUrl;
+                    document.getElementById('coverPreview').style.display = 'block';
+                }
+
+                // Clear search results
+                document.getElementById('searchResults').innerHTML = '<p style="color: #28a745; text-align: center;">✓ Book selected! Please enter the price below.</p>';
+                document.getElementById('bookSearchInput').value = '';
+                
+                // Focus on price field
+                document.getElementById('bookPrice').focus();
+
+            } catch (error) {
+                console.error('Error loading book details:', error);
+                alert('Error loading book details. Please try again.');
+            }
+
+            document.getElementById('loadingSpinner').style.display = 'none';
         }
 
         // Show add book form
@@ -484,6 +477,8 @@
             editingBookId = null;
             uploadedCoverUrl = null;
             document.getElementById('formTitle').textContent = 'Add New Book';
+            document.getElementById('bookSearchInput').value = '';
+            document.getElementById('searchResults').innerHTML = '';
             document.getElementById('bookTitle').value = '';
             document.getElementById('bookTitle').readOnly = true;
             document.getElementById('bookAuthor').value = '';
